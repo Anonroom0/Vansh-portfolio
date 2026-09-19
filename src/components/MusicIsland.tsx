@@ -48,17 +48,19 @@ export function MusicIsland() {
   useEffect(() => {
     if (!track || started.current) return;
     const tryStart = () => {
-      if (started.current || !audioRef.current) return;
+      const el = audioRef.current;
+      if (started.current || !el) return;
       started.current = true;
-      audioRef.current.src = track.audio_url;
-      audioRef.current
-        .play()
+      el.src = track.audio_url;
+      el.play()
         .then(() => setPlaying(true))
         .catch(() => setPlaying(false));
       window.removeEventListener("pointerdown", tryStart);
     };
-    audioRef.current.src = track.audio_url;
-    audioRef.current
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.src = track.audio_url;
+    audio
       .play()
       .then(() => {
         started.current = true;
