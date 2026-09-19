@@ -89,3 +89,11 @@ html.dark body {
   outline: 2px solid rgba(0, 122, 255, 0.6);
   outline-offset: 2px;
 }
+
+@keyframes spin-disc {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin-disc {
+  animation: spin-disc 4s linear infinite;
+}

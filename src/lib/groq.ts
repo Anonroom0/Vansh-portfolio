@@ -18,12 +18,12 @@ export async function getAIReply(
 
     if (error) {
       console.error("Edge function error:", error);
-      return "Sorry, my AI brain hiccuped. Message saved — Vaibhav will see it later.";
+      return "Sorry, my AI brain hiccuped. Message saved — Vansh will see it later.";
     }
 
     return data?.reply?.trim() || "Hmm, I blanked for a second. Try again?";
   } catch (err) {
     console.error("AI reply error:", err);
-    return "Sorry, my AI brain hiccuped. Message saved — Vaibhav will see it later.";
+    return "Sorry, my AI brain hiccuped. Message saved — Vansh will see it later.";
   }
 }

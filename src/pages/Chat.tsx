@@ -90,7 +90,7 @@ export function Chat() {
     return (
       <div className="max-w-md mx-auto space-y-8 pt-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Chat with Vaibhav</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Chat with Vansh</h1>
           <p className="text-zinc-600 dark:text-zinc-400">No signup needed. We generate a private User ID + Password so you can return later.</p>
         </div>
         <div className="glass-strong rounded-3xl p-6 space-y-4">

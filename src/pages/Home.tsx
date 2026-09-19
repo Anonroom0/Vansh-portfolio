@@ -12,7 +12,7 @@ export function Home() {
         </div>
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
           Hey, I&apos;m{" "}
-          <span className="bg-gradient-to-r from-[#007AFF] to-[#5856D6] bg-clip-text text-transparent">Vaibhav</span>
+          <span className="bg-gradient-to-r from-[#007AFF] to-[#5856D6] bg-clip-text text-transparent">Vansh</span>
         </h1>
         <p className="text-xl sm:text-2xl text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed font-medium">
           Computer Science student preparing for JEE.

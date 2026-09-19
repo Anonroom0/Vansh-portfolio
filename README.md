@@ -1,4 +1,4 @@
-# Vaibhav K. Singhal — Portfolio & Chat
+# Vansh Kumar — Portfolio & Chat
 
 Apple-style personal portfolio with anonymous chat + AI clone (Groq) + locked admin panel.
 

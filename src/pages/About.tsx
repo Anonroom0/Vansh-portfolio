@@ -14,7 +14,7 @@ export function About() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">About me</h1>
         <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-          I&apos;m Vaibhav K. Singhal — a Class 11 Computer Science student from Meerut, India, currently preparing for the JEE while building apps that real people use.
+          I&apos;m Vansh Kumar — a Class 11 Computer Science student from Meerut, India, currently preparing for the JEE while building apps that real people use.
         </p>
       </motion.div>
       <div className="grid sm:grid-cols-2 gap-4">
