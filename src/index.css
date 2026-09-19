@@ -1,99 +1,68 @@
 @import "tailwindcss";
-
-/* Enable class-based dark mode (Tailwind v4) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+:root {
+  --ink: #111111;
+  --paper: #f4f1ea;
+  --card: #ffffff;
+  --line: #111111;
+  --muted: #6b6b6b;
 }
 
-html {
-  scroll-behavior: smooth;
+.dark {
+  --ink: #f3f3f3;
+  --paper: #0c0c0c;
+  --card: #161616;
+  --line: #f3f3f3;
+  --muted: #9a9a9a;
 }
 
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
 body {
-  margin: 0;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  font-family: var(--font-sans);
-  background-color: #ffffff;
-  color: #18181b;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
-.dark body,
-html.dark body {
-  background-color: #000000;
-  color: #f4f4f5;
+.grid-bg {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 8%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
-/* Utility classes used across the app */
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.rule { border: 2px solid var(--line); }
+.shadow-hard { box-shadow: 4px 4px 0 var(--line); }
+.btn-hard {
+  border: 2px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 650;
+  box-shadow: 3px 3px 0 var(--line);
 }
-.dark .glass {
-  background: rgba(24, 24, 27, 0.7);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.glass-strong {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-}
-.dark .glass-strong {
-  background: rgba(24, 24, 27, 0.85);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-
-.bubble-user {
-  background: #007AFF;
-  color: white;
-  border-radius: 1rem 1rem 0.25rem 1rem;
-  padding: 0.625rem 1rem;
-  max-width: 80%;
-  margin-left: auto;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-.bubble-ai, .bubble-admin {
-  background: #e4e4e7;
-  color: #18181b;
-  border-radius: 1rem 1rem 1rem 0.25rem;
-  padding: 0.625rem 1rem;
-  max-width: 80%;
-  margin-right: auto;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-.dark .bubble-ai, .dark .bubble-admin {
-  background: #27272a;
-  color: #f4f4f5;
-}
-
-.dock-item {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.dock-item:hover {
-  transform: translateY(-8px) scale(1.12);
-}
-
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
-.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
-
-*:focus-visible {
-  outline: 2px solid rgba(0, 122, 255, 0.6);
-  outline-offset: 2px;
+.btn-hard:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--line); }
+.btn-fill {
+  border: 2px solid var(--line);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 650;
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 40%, transparent);
 }
 
 @keyframes spin-disc {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-.spin-disc {
-  animation: spin-disc 4s linear infinite;
+.spin-disc { animation: spin-disc 6s linear infinite; }
+
+.island {
+  background: #111;
+  color: #f5f5f5;
+  border-radius: 999px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
 }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--ink); }

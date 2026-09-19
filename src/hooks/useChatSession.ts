@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { generatePassword, generateUserId, simpleHash } from "../lib/utils";
+import { simpleHash } from "../lib/utils";
 
 const STORAGE_KEY = "vk_chat_credentials";
 
@@ -8,7 +8,6 @@ type Credentials = { userId: string; password: string; dbId: string };
 
 export function useChatSession() {
   const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +26,6 @@ export function useChatSession() {
             const hash = await simpleHash(parsed.password);
             if (hash === data.generated_password_hash) {
               setCredentials(parsed);
-              setIsLoading(false);
-              return;
             }
           }
         }
@@ -38,46 +35,50 @@ export function useChatSession() {
     restore();
   }, []);
 
-  const createSession = useCallback(async () => {
-    setIsLoading(true);
+  const register = useCallback(async (userId: string, password: string) => {
     setError(null);
+    const id = userId.trim();
+    if (id.length < 3) return setError("Username must be at least 3 characters");
+    if (password.length < 6) return setError("Password must be at least 6 characters");
+    setIsLoading(true);
     try {
-      const userId = generateUserId();
-      const password = generatePassword();
       const hash = await simpleHash(password);
       const { data, error: insertError } = await supabase
         .from("chat_users")
-        .insert({ generated_user_id: userId, generated_password_hash: hash })
+        .insert({ generated_user_id: id, generated_password_hash: hash })
         .select()
         .single();
-      if (insertError) throw insertError;
-      const creds: Credentials = { userId, password, dbId: data.id };
+      if (insertError) {
+        if (String(insertError.message).includes("duplicate") || insertError.code === "23505") {
+          throw new Error("That username is taken");
+        }
+        throw insertError;
+      }
+      const creds = { userId: id, password, dbId: data.id };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
       setCredentials(creds);
-      setShowSaveModal(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to create session");
+      setError(e instanceof Error ? e.message : "Could not create account");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const loginWithCredentials = useCallback(async (userId: string, password: string) => {
-    setIsLoading(true);
+  const login = useCallback(async (userId: string, password: string) => {
     setError(null);
+    setIsLoading(true);
     try {
       const { data, error: fetchError } = await supabase
         .from("chat_users")
         .select("*")
-        .eq("generated_user_id", userId.trim().toUpperCase())
+        .eq("generated_user_id", userId.trim())
         .single();
-      if (fetchError || !data) throw new Error("Invalid User ID");
+      if (fetchError || !data) throw new Error("Unknown username");
       const hash = await simpleHash(password);
-      if (hash !== data.generated_password_hash) throw new Error("Invalid Password");
-      const creds: Credentials = { userId: data.generated_user_id, password, dbId: data.id };
+      if (hash !== data.generated_password_hash) throw new Error("Wrong password");
+      const creds = { userId: data.generated_user_id, password, dbId: data.id };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
       setCredentials(creds);
-      setShowSaveModal(false);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Login failed");
     } finally {
@@ -90,5 +91,5 @@ export function useChatSession() {
     setCredentials(null);
   }, []);
 
-  return { credentials, showSaveModal, setShowSaveModal, isLoading, error, createSession, loginWithCredentials, logout };
+  return { credentials, isLoading, error, register, login, logout };
 }

@@ -81,15 +81,20 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.messages TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.portfolio_assets TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_settings TO anon, authenticated;
 
-INSERT INTO public.portfolio_assets (type, title, description, url, sort_order)
-SELECT v.type, v.title, v.description, v.url, v.sort_order
-FROM (
-  VALUES
-    ('app'::text, 'AnonRoom', 'Anonymous messaging platform', 'https://anonroom.example.com', 1),
-    ('app', 'JeeFlow', 'JEE study planner and revision tracker', 'https://jeeflow.example.com', 2),
-    ('connection', 'GitHub', 'Open-source work', 'https://github.com', 1),
-    ('connection', 'Spotify', 'What I listen to', 'https://open.spotify.com', 2)
-) AS v(type, title, description, url, sort_order)
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.portfolio_assets a WHERE a.title = v.title
+
+CREATE TABLE IF NOT EXISTS public.playlist (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  artist TEXT,
+  audio_url TEXT NOT NULL,
+  artwork_url TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.playlist ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_select_playlist" ON public.playlist;
+DROP POLICY IF EXISTS "public_all_playlist" ON public.playlist;
+CREATE POLICY "public_select_playlist" ON public.playlist FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "public_all_playlist" ON public.playlist FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.playlist TO anon, authenticated;
