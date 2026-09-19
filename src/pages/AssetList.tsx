@@ -32,8 +32,7 @@ export function AssetList({
       .then(({ data }) => {
         setItems(data || []);
         setReady(true);
-      })
-      .catch(() => setReady(true));
+      }, () => setReady(true));
   }, [type]);
 
   return (

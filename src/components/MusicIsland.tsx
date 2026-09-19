@@ -32,8 +32,7 @@ export function MusicIsland() {
       .then(({ data }) => {
         setTracks((data as PlaylistTrack[]) || []);
         setReady(true);
-      })
-      .catch(() => setReady(true));
+      }, () => setReady(true));
   }, []);
 
   const nextRef = useRef<() => void>(() => {});
