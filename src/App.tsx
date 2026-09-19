@@ -6,6 +6,7 @@ import { Apps } from "./pages/Apps";
 import { Interests } from "./pages/Interests";
 import { Gallery } from "./pages/Gallery";
 import { Links } from "./pages/Links";
+import { Movies } from "./pages/Movies";
 import { Chat } from "./pages/Chat";
 import { Admin } from "./pages/Admin";
 
@@ -51,6 +52,7 @@ function AppRoutes() {
         <Route index element={<Home />} />
         <Route path="about" element={<About />} />
         <Route path="apps" element={<Apps />} />
+        <Route path="movies" element={<Movies />} />
         <Route path="interests" element={<Interests />} />
         <Route path="gallery" element={<Gallery />} />
         <Route path="links" element={<Links />} />

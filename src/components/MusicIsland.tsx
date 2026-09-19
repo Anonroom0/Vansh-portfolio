@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Music2, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export type PlaylistTrack = {
@@ -15,122 +16,183 @@ export function MusicIsland() {
   const [tracks, setTracks] = useState<PlaylistTrack[]>([]);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [ready, setReady] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const started = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
+  // Load playlist once. No autoplay — browsers block it anyway, and it
+  // previously left the player in a stuck "not working" state.
   useEffect(() => {
     supabase
       .from("playlist")
       .select("*")
       .order("sort_order")
-      .then(({ data }) => setTracks((data as PlaylistTrack[]) || []));
+      .then(({ data }) => {
+        setTracks((data as PlaylistTrack[]) || []);
+        setReady(true);
+      })
+      .catch(() => setReady(true));
   }, []);
+
+  const nextRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audioRef.current = audio;
+    const onEnded = () => nextRef.current();
+    const onWaiting = () => setLoading(true);
+    const onPlaying = () => setLoading(false);
+    const onError = () => {
+      setLoading(false);
+      setPlaying(false);
+    };
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("waiting", onWaiting);
+    audio.addEventListener("playing", onPlaying);
+    audio.addEventListener("error", onError);
+    return () => {
+      audio.pause();
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("waiting", onWaiting);
+      audio.removeEventListener("playing", onPlaying);
+      audio.removeEventListener("error", onError);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (open && panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [open]);
 
   const track = tracks[index];
 
-  useEffect(() => {
-    if (!audioRef.current) audioRef.current = new Audio();
+  const play = async () => {
     const audio = audioRef.current;
-    audio.loop = false;
-    audio.preload = "auto";
-    const onEnded = () => setPlaying(false);
-    audio.addEventListener("ended", onEnded);
-    return () => audio.removeEventListener("ended", onEnded);
-  }, []);
-
-  useEffect(() => {
-    if (!track || !audioRef.current) return;
-    audioRef.current.src = track.audio_url;
-    if (playing) audioRef.current.play().catch(() => setPlaying(false));
-  }, [index, track]);
-
-  useEffect(() => {
-    if (!track || started.current) return;
-    const tryStart = () => {
-      const el = audioRef.current;
-      if (started.current || !el) return;
-      started.current = true;
-      el.src = track.audio_url;
-      el.play()
-        .then(() => setPlaying(true))
-        .catch(() => setPlaying(false));
-      window.removeEventListener("pointerdown", tryStart);
-    };
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.src = track.audio_url;
-    audio
-      .play()
-      .then(() => {
-        started.current = true;
-        setPlaying(true);
-      })
-      .catch(() => {
-        window.addEventListener("pointerdown", tryStart, { once: true });
-      });
-    return () => window.removeEventListener("pointerdown", tryStart);
-  }, [track]);
-
-  const toggle = async () => {
-    if (!audioRef.current || !track) return;
-    if (playing) {
-      audioRef.current.pause();
-      setPlaying(false);
-    } else {
-      await audioRef.current.play();
+    if (!audio || !track) return;
+    try {
+      if (audio.src !== track.audio_url) {
+        audio.src = track.audio_url;
+      }
+      setLoading(true);
+      await audio.play();
       setPlaying(true);
+    } catch {
+      setPlaying(false);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const prev = () => setIndex((i) => (tracks.length ? (i - 1 + tracks.length) % tracks.length : 0));
-  const next = () => setIndex((i) => (tracks.length ? (i + 1) % tracks.length : 0));
+  const pause = () => {
+    audioRef.current?.pause();
+    setPlaying(false);
+  };
+
+  const toggle = () => (playing ? pause() : play());
+
+  const prev = () => {
+    if (!tracks.length) return;
+    setPlaying(false);
+    setIndex((i) => (i - 1 + tracks.length) % tracks.length);
+  };
+  const next = () => {
+    if (!tracks.length) return;
+    setPlaying(false);
+    setIndex((i) => (i + 1) % tracks.length);
+  };
+  useEffect(() => {
+    nextRef.current = next;
+  });
+
+  // When the track changes while the user intends to be playing, load & play the new source.
+  const wasPlaying = useRef(false);
+  useEffect(() => {
+    if (wasPlaying.current) play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+  useEffect(() => {
+    wasPlaying.current = playing;
+  }, [playing]);
+
+  const disabled = !ready || tracks.length === 0;
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-9 h-9 rounded-full overflow-hidden border-2 border-[var(--line)] shrink-0"
+        className="icon-btn relative"
         aria-label="Music"
-        title={track ? `${track.title}` : "No playlist yet"}
+        title={track ? track.title : "Playlist"}
       >
-        <div
-          className={`w-full h-full ${playing ? "spin-disc" : ""}`}
-          style={{
-            background: track?.artwork_url
-              ? `url(${track.artwork_url}) center/cover`
-              : "conic-gradient(#222 0 25%, #888 0 50%, #222 0 75%, #888 0)",
-          }}
-        />
+        {track?.artwork_url ? (
+          <span
+            className={`block w-full h-full rounded-full bg-cover bg-center ${playing ? "spin-disc" : ""}`}
+            style={{ backgroundImage: `url(${track.artwork_url})` }}
+          />
+        ) : (
+          <Music2 className="w-4 h-4" />
+        )}
+        {playing && (
+          <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: "var(--accent)" }} />
+        )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-12 z-[80] island px-3 py-2 flex items-center gap-2 min-w-[240px]">
-          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/20">
-            <div
-              className={`w-full h-full ${playing ? "spin-disc" : ""}`}
-              style={{
-                background: track?.artwork_url
-                  ? `url(${track.artwork_url}) center/cover`
-                  : "conic-gradient(#333, #999, #333)",
-              }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold truncate">{track?.title || "Empty playlist"}</div>
-            <div className="text-[10px] text-white/60 truncate">{track?.artist || "Add tracks in admin"}</div>
-          </div>
-          <button onClick={prev} className="p-1 disabled:opacity-30" disabled={!tracks.length} aria-label="Previous">
-            <SkipBack className="w-4 h-4" />
-          </button>
-          <button onClick={toggle} className="p-1 disabled:opacity-30" disabled={!tracks.length} aria-label={playing ? "Pause" : "Play"}>
-            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
-          <button onClick={next} className="p-1 disabled:opacity-30" disabled={!tracks.length} aria-label="Next">
-            <SkipForward className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute right-0 top-12 z-[80] surface-elevated p-3 w-72 origin-top-right"
+          >
+            {disabled ? (
+              <p className="text-sm px-1 py-2" style={{ color: "var(--muted)" }}>
+                {ready ? "No tracks yet — add some in admin." : "Loading playlist…"}
+              </p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-cover bg-center ${playing ? "spin-disc" : ""}`}
+                  style={{
+                    backgroundImage: track?.artwork_url
+                      ? `url(${track.artwork_url})`
+                      : "conic-gradient(from 0deg, #444, #999, #444)",
+                  }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold truncate">{track?.title}</div>
+                  <div className="text-[12px] truncate" style={{ color: "var(--muted)" }}>{track?.artist || "Unknown artist"}</div>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <button onClick={prev} disabled={disabled} className="icon-btn" aria-label="Previous">
+                <SkipBack className="w-4 h-4" />
+              </button>
+              <button onClick={toggle} disabled={disabled} className="icon-btn" style={{ width: 44, height: 44 }} aria-label={playing ? "Pause" : "Play"}>
+                {loading ? (
+                  <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                ) : playing ? (
+                  <Pause className="w-5 h-5" />
+                ) : (
+                  <Play className="w-5 h-5 ml-0.5" />
+                )}
+              </button>
+              <button onClick={next} disabled={disabled} className="icon-btn" aria-label="Next">
+                <SkipForward className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,10 +1,63 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Send, LogOut, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
+import { Send, LogOut, Lock, UserRound } from "lucide-react";
+import { format, isSameDay } from "date-fns";
 import { useChatSession } from "../hooks/useChatSession";
 import { supabase, type Message } from "../lib/supabase";
 import { getAIReply } from "../lib/groq";
 import { cn } from "../lib/utils";
+
+function DateDivider({ date }: { date: string }) {
+  return (
+    <div className="flex items-center justify-center py-2">
+      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ color: "var(--muted)", background: "color-mix(in srgb, var(--ink) 5%, transparent)" }}>
+        {date}
+      </span>
+    </div>
+  );
+}
+
+function Bubble({ message, grouped }: { message: Message; grouped: boolean }) {
+  const mine = message.sender_type === "user";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className={cn("flex flex-col max-w-[78%]", mine ? "items-end self-end" : "items-start self-start")}
+    >
+      <div
+        className={cn("px-4 py-2.5 text-[15px] leading-snug", mine ? "rounded-[20px] rounded-br-[6px]" : "rounded-[20px] rounded-bl-[6px]")}
+        style={
+          mine
+            ? { background: "var(--accent)", color: "#fff" }
+            : { background: "color-mix(in srgb, var(--ink) 6%, transparent)", color: "var(--ink)" }
+        }
+      >
+        {message.content}
+      </div>
+      {!grouped && (
+        <span className="text-[10.5px] mt-1 px-1" style={{ color: "var(--muted)" }}>
+          {format(new Date(message.created_at), "HH:mm")}
+        </span>
+      )}
+    </motion.div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-center gap-1 px-4 py-3 rounded-[20px] rounded-bl-[6px] w-fit" style={{ background: "color-mix(in srgb, var(--ink) 6%, transparent)" }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="typing-dot w-1.5 h-1.5 rounded-full"
+          style={{ background: "var(--muted)", animationDelay: `${i * 0.15}s` }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function Chat() {
   const { credentials, isLoading, error, register, login, logout } = useChatSession();
@@ -62,7 +115,9 @@ export function Chat() {
       try {
         const { data: settings } = await supabase.from("admin_settings").select("value").eq("key", "online_status").single();
         isOnline = settings?.value?.is_online === true;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       if (!isOnline) {
         setAiThinking(true);
@@ -88,66 +143,137 @@ export function Chat() {
     }
   }, [input, credentials, sending, messages]);
 
-  if (isLoading) return <p className="text-[var(--muted)]">Loading…</p>;
+  if (isLoading) {
+    return (
+      <div className="space-y-3 max-w-md">
+        <div className="skeleton h-10 w-40" />
+        <div className="skeleton h-32" />
+      </div>
+    );
+  }
 
   if (!credentials) {
     return (
-      <div className="max-w-md space-y-5">
-        <h1 className="text-4xl font-black tracking-tight">Chat</h1>
-        <p className="text-[var(--muted)]">Pick your own username and password. No email. No OTP.</p>
-        <div className="flex gap-2">
-          <button className={mode === "login" ? "btn-fill px-3 py-1" : "btn-hard px-3 py-1"} onClick={() => setMode("login")}>
-            Sign in
-          </button>
-          <button className={mode === "register" ? "btn-fill px-3 py-1" : "btn-hard px-3 py-1"} onClick={() => setMode("register")}>
-            Create
-          </button>
+      <div className="max-w-md space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-extrabold tracking-tight">Chat</h1>
+          <p style={{ color: "var(--muted)" }}>Pick your own username and password. No email, no OTP.</p>
         </div>
-        <div className="rule bg-[var(--card)] p-5 shadow-hard space-y-3">
-          <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="Username"
-            className="w-full px-3 py-3 rule bg-[var(--paper)] outline-none" />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password"
-            className="w-full px-3 py-3 rule bg-[var(--paper)] outline-none" />
+
+        <div className="flex gap-1 p-1 rounded-full w-fit" style={{ background: "color-mix(in srgb, var(--ink) 5%, transparent)" }}>
+          {(["login", "register"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={cn("pill", mode === m && "active")}
+            >
+              {m === "login" ? "Sign in" : "Create"}
+            </button>
+          ))}
+        </div>
+
+        <motion.div layout className="surface-elevated p-6 space-y-3">
+          <div className="relative">
+            <UserRound className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--muted)" }} />
+            <input
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="Username"
+              className="field field-icon"
+            />
+          </div>
+          <div className="relative">
+            <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "var(--muted)" }} />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              onKeyDown={(e) => e.key === "Enter" && (mode === "register" ? register(userId, password) : login(userId, password))}
+              className="field field-icon"
+            />
+          </div>
           <button
-            className="btn-fill w-full py-3"
+            className="btn btn-primary w-full py-3"
             onClick={() => (mode === "register" ? register(userId, password) : login(userId, password))}
           >
             {mode === "register" ? "Create conversation" : "Open conversation"}
           </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-        </div>
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="text-sm"
+                style={{ color: "var(--danger)" }}
+              >
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-8rem)]">
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-[calc(100dvh-11.5rem)] md:h-[calc(100dvh-13rem)]">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-black">Chat</h1>
-          <p className="text-xs text-[var(--muted)]">{credentials.userId}</p>
+          <h1 className="text-2xl font-extrabold tracking-tight">Chat</h1>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>{credentials.userId}</p>
         </div>
-        <button onClick={logout} className="btn-hard p-2" aria-label="Sign out"><LogOut className="w-4 h-4" /></button>
+        <button onClick={logout} className="icon-btn" aria-label="Sign out">
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
-      <div className="flex-1 overflow-y-auto space-y-3 rule bg-[var(--card)] p-4">
-        {messages.length === 0 && <p className="text-sm text-[var(--muted)]">No messages yet.</p>}
-        {messages.map((m) => (
-          <div key={m.id} className={cn("flex flex-col", m.sender_type === "user" ? "items-end" : "items-start")}>
-            <div className={cn("max-w-[80%] px-3 py-2 text-sm border-2 border-[var(--line)]", m.sender_type === "user" ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--paper)]")}>
-              {m.content}
+
+      <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 surface p-4 min-h-0">
+        {messages.length === 0 && (
+          <p className="text-sm m-auto" style={{ color: "var(--muted)" }}>
+            No messages yet — say hi.
+          </p>
+        )}
+        {messages.map((m, i) => {
+          const prev = messages[i - 1];
+          const next = messages[i + 1];
+          const showDivider = !prev || !isSameDay(new Date(prev.created_at), new Date(m.created_at));
+          const grouped = !!next && next.sender_type === m.sender_type && new Date(next.created_at).getTime() - new Date(m.created_at).getTime() < 60_000;
+          return (
+            <div key={m.id} className="flex flex-col">
+              {showDivider && <DateDivider date={format(new Date(m.created_at), "EEEE, MMM d")} />}
+              <Bubble message={m} grouped={grouped} />
             </div>
-            <span className="text-[10px] text-[var(--muted)] mt-1">{format(new Date(m.created_at), "HH:mm")}</span>
-          </div>
-        ))}
-        {aiThinking && <p className="text-sm text-[var(--muted)]">…</p>}
+          );
+        })}
+        <AnimatePresence>
+          {aiThinking && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="self-start">
+              <TypingIndicator />
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div ref={bottomRef} />
       </div>
-      <div className="flex gap-2 pt-3">
-        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Message" className="flex-1 px-3 py-3 rule bg-[var(--card)] outline-none" />
-        <button onClick={sendMessage} disabled={!input.trim() || sending} className="btn-fill px-4">
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
+
+      <div className="flex gap-2 pt-3 shrink-0">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Message"
+          className="field flex-1"
+        />
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={sendMessage}
+          disabled={!input.trim() || sending}
+          className="btn btn-primary w-12 h-12 shrink-0"
+          aria-label="Send"
+        >
+          <Send className="w-4 h-4" />
+        </motion.button>
       </div>
     </div>
   );

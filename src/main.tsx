@@ -16,14 +16,23 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 32, fontFamily: "system-ui", color: "#fafafa", background: "#0a0a0a", minHeight: "100vh" }}>
-          <h1 style={{ color: "#ef4444" }}>Something went wrong</h1>
-          <pre style={{ whiteSpace: "pre-wrap", background: "#18181b", padding: 16, borderRadius: 8, marginTop: 16 }}>
+        <div style={{ padding: 32, fontFamily: "-apple-system, Inter, system-ui", color: "#f5f5f7", background: "#000", minHeight: "100vh" }}>
+          <h1 style={{ fontWeight: 800, letterSpacing: "-0.02em" }}>Something went wrong</h1>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              background: "#1c1c1e",
+              padding: 16,
+              borderRadius: 16,
+              marginTop: 16,
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
             {this.state.error.message}
             {"\n\n"}
             {this.state.error.stack}
           </pre>
-          <p style={{ marginTop: 16, color: "#a1a1aa" }}>
+          <p style={{ marginTop: 16, color: "#98989d" }}>
             Open the browser console (F12) for more details. Common fix: delete node_modules and run npm install again.
           </p>
         </div>

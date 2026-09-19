@@ -1,4 +1,7 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { MusicIsland } from "./MusicIsland";
 import { NAV } from "../lib/nav";
@@ -6,82 +9,76 @@ import { cn } from "../lib/utils";
 
 export function Layout() {
   const { pathname } = useLocation();
-  return (
-    <div className="min-h-dvh grid-bg">
-      <header className="sticky top-0 z-40 border-b-2 border-[var(--line)] bg-[var(--paper)]">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-          <NavLink to="/" className="font-black tracking-tight text-lg">VANSH</NavLink>
-          <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
-            {NAV.map((n) => (
-              <NavLink
-                key={n.to}
-                to={n.to}
-                end={n.to === "/"}
-                className={({ isActive }) =>
-                  cn("px-3 py-1 border-2 border-transparent", isActive && "border-[var(--line)] bg-[var(--card)]")
-                }
-              >
-                {n.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="flex items-center gap-2">
-            <MusicIsland />
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+  const navigate = useNavigate();
+  const isRoot = pathname === "/";
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
-      <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-        {/* Desktop: two columns. Mobile: stacked, Linktree list on home only */}
-        <div className="hidden md:grid md:grid-cols-[280px_1fr] gap-8 items-start">
-          <aside className="sticky top-24 space-y-3">
-            <div className="rule bg-[var(--card)] p-4 shadow-hard">
-              <div className="text-xs uppercase tracking-widest text-[var(--muted)]">Vansh Kumar</div>
-              <div className="mt-1 font-black text-2xl leading-none">Portfolio</div>
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [pathname]);
+
+  useEffect(() => {
+    const active = scrollerRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+    active?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }, [pathname]);
+
+  const currentLabel = NAV.find((n) => (n.to === "/" ? isRoot : pathname.startsWith(n.to)))?.label ?? "Vansh";
+
+  return (
+    <div className="min-h-dvh" style={{ background: "var(--bg)" }}>
+      <header className="sticky top-0 z-40 glass border-b" style={{ borderColor: "var(--hairline)" }}>
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="h-14 flex items-center gap-3">
+            {!isRoot ? (
+              <button onClick={() => navigate(-1)} className="icon-btn shrink-0 -ml-1.5" aria-label="Back">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            ) : (
+              <NavLink to="/" className="font-bold tracking-tight text-[17px] shrink-0">
+                Vansh
+              </NavLink>
+            )}
+            <span className="font-semibold text-[15px] truncate">{isRoot ? "" : currentLabel}</span>
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <MusicIsland />
+              <ThemeToggle />
             </div>
-            <nav className="space-y-2">
-              {NAV.map((n) => (
+          </div>
+
+          <nav ref={scrollerRef} className="flex items-center gap-1 no-scrollbar overflow-x-auto pb-2.5 -mt-0.5">
+            {NAV.map((n) => {
+              const Icon = n.icon;
+              const active = n.to === "/" ? isRoot : pathname.startsWith(n.to);
+              return (
                 <NavLink
                   key={n.to}
                   to={n.to}
                   end={n.to === "/"}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center justify-between rule bg-[var(--card)] px-4 py-3 font-semibold shadow-hard",
-                      isActive && "bg-[var(--ink)] text-[var(--paper)]"
-                    )
-                  }
+                  data-active={active}
+                  className={cn("pill flex items-center gap-1.5 shrink-0", active && "active")}
                 >
+                  <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
                   {n.label}
-                  <span aria-hidden>→</span>
                 </NavLink>
-              ))}
-            </nav>
-          </aside>
-          <section>
-            <Outlet />
-          </section>
+              );
+            })}
+          </nav>
         </div>
+      </header>
 
-        <div className="md:hidden space-y-6">
-          {pathname === "/" && (
-            <nav className="space-y-2">
-              {NAV.filter((n) => n.to !== "/").map((n) => (
-                <NavLink
-                  key={n.to}
-                  to={n.to}
-                  className="flex items-center justify-between rule bg-[var(--card)] px-4 py-4 font-semibold shadow-hard"
-                >
-                  {n.label}
-                  <span aria-hidden>→</span>
-                </NavLink>
-              ))}
-            </nav>
-          )}
-          <Outlet />
-        </div>
-      </div>
+      <main className="max-w-5xl mx-auto px-4 py-8 md:py-14">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
