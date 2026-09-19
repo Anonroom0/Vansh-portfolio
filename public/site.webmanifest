@@ -1,0 +1,9 @@
+{
+  "name": "Vaibhav K. Singhal",
+  "short_name": "Vaibhav",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "display": "standalone",
+  "start_url": "/"
+}
